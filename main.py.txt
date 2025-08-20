@@ -1,2 +1,47 @@
-discord.py
-Flask
+import os
+import discord
+from discord.ext import commands
+
+# ===== إعدادات أساسية =====
+TOKEN = os.environ["TOKEN"]               # نقرأ التوكن من بيئة Railway
+VOICE_CHANNEL_ID = 1404554567370412182    # <-- عدّلها إلى رومك الصوتي
+
+# فعّل Message Content Intent لأننا نستخدم أوامر نصية مثل !ping
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+    # نحاول نجلب القناة من الكاش أو من الـ API
+    channel = bot.get_channel(VOICE_CHANNEL_ID)
+    if channel is None:
+        try:
+            channel = await bot.fetch_channel(VOICE_CHANNEL_ID)
+        except Exception as e:
+            print(f"❌ Couldn't fetch channel: {e}")
+            return
+
+    # نتأكد أنها قناة صوتية ثم نحاول الاتصال
+    if isinstance(channel, discord.VoiceChannel):
+        try:
+            if not channel.guild.voice_client:
+                await channel.connect()
+            else:
+                await channel.guild.voice_client.move_to(channel)
+            print(f"🔊 Connected to voice: {channel.name}")
+        except Exception as e:
+            print(f"❌ Voice connect failed: {e}")
+    else:
+        print("⚠️ VOICE_CHANNEL_ID لا يشير لقناة صوتية.")
+
+# أمر بسيط للاختبار
+@bot.command()
+async def ping(ctx):
+    await ctx.send("pong 🏓")
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
